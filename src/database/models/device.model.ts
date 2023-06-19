@@ -25,12 +25,12 @@ const deviceSchema = new Schema<IDevice>({
   },
   sensors: [
     {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId || String,
       ref: "Sensor",
     },
   ],
 });
 
-const Device = model("Device", deviceSchema);
+const Device = model<IDevice>("Device", deviceSchema);
 
 export default Device;

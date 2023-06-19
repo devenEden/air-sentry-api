@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 
 export default () => {
   log.warn("Attempting DB Connection");
+  mongoose.set("debug", true);
   mongoose
     .connect(envVars.Database.connection as string)
     .then(() => {

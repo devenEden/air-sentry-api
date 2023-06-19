@@ -53,7 +53,7 @@ export interface IDevice extends Document {
         default: Moment;
       }
     | Date;
-  sensors: Schema.Types.ObjectId[] | ISensor[];
+  sensors?: Schema.Types.ObjectId[] | ISensor[];
 }
 
 export interface IReading extends Document {

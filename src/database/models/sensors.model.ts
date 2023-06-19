@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+// import { ObjectId } from "mongodb";
 import { Schema, model } from "mongoose";
 import momentTimezone from "moment-timezone";
 import envVars from "@config/envVars";
@@ -15,7 +15,10 @@ const SensorSchema = new Schema<ISensor>({
     required: true,
   },
   sensorUnits: String,
-  deviceId: ObjectId,
+  deviceId: {
+    type: Schema.Types.ObjectId,
+    ref: "Device",
+  },
   readings: [
     {
       type: Schema.Types.ObjectId,

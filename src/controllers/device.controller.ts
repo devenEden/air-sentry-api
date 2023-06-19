@@ -18,7 +18,7 @@ class DeviceController {
    */
   async index(req: Request, res: Response, next: NextFunction) {
     try {
-      const devices = await Device.find();
+      const devices = await Device.find().populate("sensors");
 
       http.sendSuccess(
         res,
@@ -68,10 +68,14 @@ class DeviceController {
     try {
       const data: IDevice = req.body;
 
+      let { sensors } = data;
+
+      delete data.sensors;
+
       const device = await Device.create(data);
 
-      const sensors = map(
-        data.sensors as ISensor[],
+      sensors = map(
+        sensors as ISensor[],
         (sensor: ISensor): ISensor => ({
           ...sensor,
           deviceId: device._id as unknown as Schema.Types.ObjectId,
@@ -79,6 +83,9 @@ class DeviceController {
       );
 
       const newSensors = await Sensor.insertMany(sensors);
+
+      device.sensors = newSensors;
+      device.save();
 
       return http.sendSuccess(
         res,
