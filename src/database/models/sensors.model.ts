@@ -14,6 +14,7 @@ const SensorSchema = new Schema<ISensor>({
     unique: true,
     required: true,
   },
+  sensorGrouping: String,
   sensorUnits: String,
   deviceId: {
     type: Schema.Types.ObjectId,
@@ -25,10 +26,6 @@ const SensorSchema = new Schema<ISensor>({
       ref: "Reading",
     },
   ],
-  device: {
-    type: Schema.Types.ObjectId,
-    ref: "Device",
-  },
   createdAt: {
     type: Date,
     default: momentTimezone().format("YYYY-MM-DD HH:mm:ss"),
