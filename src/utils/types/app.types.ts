@@ -9,3 +9,12 @@ export type validationErrorItem = {
   field: string | undefined;
   message: string;
 };
+
+export type latestReading = {
+  sensorValue: string | number;
+  deviceName: string | undefined;
+  sensorName: string;
+  sensorUnits: string;
+  sensorCode: string;
+  sensorGrouping: string;
+};

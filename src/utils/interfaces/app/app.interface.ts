@@ -15,9 +15,9 @@ export interface ISensor extends Document {
   sensorName: string;
   sensorCode: string;
   sensorUnits: string;
+  sensorGrouping: string;
   deviceId: Schema.Types.ObjectId;
   readings: Schema.Types.ObjectId[];
-  device: Schema.Types.ObjectId;
   createdAt:
     | {
         type: Date;

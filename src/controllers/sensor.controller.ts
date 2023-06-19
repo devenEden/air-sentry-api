@@ -16,7 +16,10 @@ class SensorController {
    */
   async index(req: Request, res: Response, next: NextFunction) {
     try {
-      const sensors = await Sensor.find().populate("device");
+      const sensors = await Sensor.find().populate({
+        path: "deviceId",
+        select: "deviceName",
+      });
 
       http.sendSuccess(
         res,
@@ -63,7 +66,9 @@ class SensorController {
     try {
       const { id } = req.params;
       const data: ISensor = req.body;
-      const sensor = await Sensor.findByIdAndUpdate(id, data);
+      const sensor = await Sensor.findByIdAndUpdate(id, data, {
+        new: true,
+      });
 
       http.sendSuccess(res, HttpStatusCodes.OK, "Sensor updated successfully", {
         sensor,

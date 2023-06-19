@@ -4,9 +4,11 @@ import Sensor from "@src/database/models/sensors.model";
 import { IReading, ISensor } from "@src/utils/interfaces/app/app.interface";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
-import { find, map, toNumber, toString } from "lodash";
+import { filter, find, map, sumBy, toNumber, toString } from "lodash";
 import { Socket, Server as SocketServer } from "socket.io";
 import constants from "@config/constants";
+import Device from "@src/database/models/device.model";
+import { latestReading } from "@src/utils/types/app.types";
 
 const { socketEvents } = constants;
 
@@ -23,42 +25,52 @@ class ReadingController {
   async getLatestReadings(req: Request, res: Response, next: NextFunction) {
     try {
       const { deviceCode } = req.params;
-
-      const reading = await Reading.find({
+      const reading = await Reading.find<IReading>({
         deviceCode,
       })
-        .populate({
-          path: "sensor",
-          select: "sensorCode sensorName sensorUnits",
-        })
-        .populate({
-          path: "device",
-          select: "deviceCode deviceName",
-        })
         .sort({ createdAt: -1 })
         .limit(20);
 
-      const sensors = await Sensor.find({
-        deviceCode,
+      const device = await Device.findOne({ deviceCode });
+
+      const sensors = await Sensor.find<ISensor>({
+        deviceId: device?._id,
       });
 
-      const latestSensorReadings = map(
-        sensors,
-        (sensor): IReading | undefined => {
-          const sensorReadings = find(
-            reading,
-            (r: IReading) => r.sensorCode === sensor.sensorCode
-          );
+      const latestSensorReadings = map(sensors, (sensor): latestReading => {
+        const sensorReadings = find(
+          reading,
+          (r: IReading) => r.sensorCode === sensor.sensorCode
+        );
 
-          return sensorReadings;
-        }
+        return {
+          sensorValue: sensorReadings?.sensorValue || 0,
+          deviceName: device?.deviceName,
+          sensorName: sensor.sensorName,
+          sensorUnits: sensor.sensorUnits,
+          sensorCode: sensor.sensorCode,
+          sensorGrouping: sensor.sensorGrouping,
+        };
+      });
+
+      const airSensors = filter(
+        latestSensorReadings,
+        (sensor) => sensor.sensorGrouping == constants.sensorGroupings.AIR
       );
+
+      const airQuality = sumBy(airSensors, "sensorValue") / airSensors.length;
 
       return http.sendSuccess(
         res,
         HttpStatusCodes.OK,
         "Latest readings retrieved successfully",
-        { latestSensorReadings }
+        {
+          latestSensorReadings,
+          airQuality: {
+            value: airQuality,
+            units: "ppm",
+          },
+        }
       );
     } catch (error) {
       return http.sendError(next, "Unable to get latest readings", error);
@@ -97,7 +109,7 @@ class ReadingController {
         });
       }
 
-      io.emit(socketEvents.READINGS, values);
+      io.emit(socketEvents.NEW_READING, values);
 
       const reading = await Reading.insertMany(values);
 
@@ -174,32 +186,29 @@ class ReadingController {
       const reading = await Reading.find<IReading>({
         deviceCode,
       })
-        .populate({
-          path: "sensor",
-          select: "sensorName sensorUnit",
-        })
-        .populate({
-          path: "device",
-          select: "deviceName",
-        })
         .sort({ createdAt: -1 })
         .limit(20);
 
+      const device = await Device.findOne({ deviceCode });
+
       const sensors = await Sensor.find<ISensor>({
-        deviceCode,
+        deviceId: device?._id,
       });
 
-      const latestSensorReadings = map(
-        sensors,
-        (sensor): IReading | undefined => {
-          const sensorReadings = find(
-            reading,
-            (r: IReading) => r.sensorCode === sensor.sensorCode
-          );
+      const latestSensorReadings = map(sensors, (sensor) => {
+        const sensorReadings = find(
+          reading,
+          (r: IReading) => r.sensorCode === sensor.sensorCode
+        );
 
-          return sensorReadings;
-        }
-      );
+        return {
+          sensorValue: sensorReadings?.sensorValue || 0,
+          deviceName: device?.deviceName,
+          sensorName: sensor.sensorName,
+          sensorUnits: sensor.sensorUnits,
+          sensorCode: sensor.sensorCode,
+        };
+      });
 
       socket.emit(socketEvents.READINGS, latestSensorReadings);
     } catch (error) {
