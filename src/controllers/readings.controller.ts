@@ -1,14 +1,14 @@
 import HttpStatusCodes from "@config/httpStatusCode";
 import Reading from "@models/reading.model";
-import Sensor from "@src/database/models/sensors.model";
-import { IReading, ISensor } from "@src/utils/interfaces/app/app.interface";
+import Sensor from "@models/sensors.model";
+import { IReading, ISensor } from "@utils/interfaces/app/app.interface";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
 import { filter, find, map, sumBy, toNumber, toString } from "lodash";
 import { Socket, Server as SocketServer } from "socket.io";
 import constants from "@config/constants";
-import Device from "@src/database/models/device.model";
-import { latestReading } from "@src/utils/types/app.types";
+import Device from "@models/device.model";
+import { latestReading } from "@utils/types/app.types";
 
 const { socketEvents } = constants;
 
@@ -67,7 +67,7 @@ class ReadingController {
         {
           latestSensorReadings,
           airQuality: {
-            value: airQuality,
+            value: airQuality.toFixed(2),
             units: "ppm",
           },
         }
@@ -195,7 +195,7 @@ class ReadingController {
         deviceId: device?._id,
       });
 
-      const latestSensorReadings = map(sensors, (sensor) => {
+      const latestSensorReadings = map(sensors, (sensor): latestReading => {
         const sensorReadings = find(
           reading,
           (r: IReading) => r.sensorCode === sensor.sensorCode
@@ -207,10 +207,24 @@ class ReadingController {
           sensorName: sensor.sensorName,
           sensorUnits: sensor.sensorUnits,
           sensorCode: sensor.sensorCode,
+          sensorGrouping: sensor.sensorGrouping,
         };
       });
 
-      socket.emit(socketEvents.READINGS, latestSensorReadings);
+      const airSensors = filter(
+        latestSensorReadings,
+        (sensor) => sensor.sensorGrouping == constants.sensorGroupings.AIR
+      );
+
+      const airQuality = sumBy(airSensors, "sensorValue") / airSensors.length;
+
+      socket.emit(socketEvents.READINGS, {
+        latestSensorReadings,
+        airQuality: {
+          value: airQuality.toFixed(2),
+          units: "ppm",
+        },
+      });
     } catch (error) {
       socket.emit("error", error);
     }
