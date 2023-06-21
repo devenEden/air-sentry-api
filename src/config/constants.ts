@@ -16,6 +16,11 @@ const constants = Object.freeze({
     ACTIVE: "active",
     INACTIVE: "inactive",
   },
+  trendPeriods: {
+    DAY: "day",
+    WEEK: "week",
+    MONTH: "month",
+  },
 });
 
 export default constants;
