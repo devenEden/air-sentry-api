@@ -4,7 +4,7 @@ import Sensor from "@models/sensors.model";
 import { IReading, ISensor } from "@utils/interfaces/app/app.interface";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
-import { filter, find, map, sumBy, toNumber, toString } from "lodash";
+import { filter, map, sumBy, toNumber, toString } from "lodash";
 import { Socket, Server as SocketServer } from "socket.io";
 import constants from "@config/constants";
 import Device from "@models/device.model";
@@ -25,11 +25,6 @@ class ReadingController {
   async getLatestReadings(req: Request, res: Response, next: NextFunction) {
     try {
       const { deviceCode } = req.params;
-      const reading = await Reading.find<IReading>({
-        deviceCode,
-      })
-        .sort({ createdAt: -1 })
-        .limit(20);
 
       const device = await Device.findOne({ deviceCode });
 
@@ -37,21 +32,25 @@ class ReadingController {
         deviceId: device?._id,
       });
 
-      const latestSensorReadings = map(sensors, (sensor): latestReading => {
-        const sensorReadings = find(
-          reading,
-          (r: IReading) => r.sensorCode === sensor.sensorCode
-        );
+      const latestSensorReadings = await Promise.all(
+        map(sensors, async (sensor): Promise<latestReading> => {
+          const [sensorReading] = await Reading.find<IReading>({
+            deviceCode,
+            sensorCode: sensor.sensorCode,
+          })
+            .sort({ createdAt: -1 })
+            .limit(1);
 
-        return {
-          sensorValue: sensorReadings?.sensorValue || 0,
-          deviceName: device?.deviceName,
-          sensorName: sensor.sensorName,
-          sensorUnits: sensor.sensorUnits,
-          sensorCode: sensor.sensorCode,
-          sensorGrouping: sensor.sensorGrouping,
-        };
-      });
+          return {
+            sensorValue: sensorReading?.sensorValue || 0,
+            deviceName: device?.deviceName,
+            sensorName: sensor.sensorName,
+            sensorUnits: sensor.sensorUnits,
+            sensorCode: sensor.sensorCode,
+            sensorGrouping: sensor.sensorGrouping,
+          };
+        })
+      );
 
       const airSensors = filter(
         latestSensorReadings,
@@ -183,33 +182,31 @@ class ReadingController {
    * */
   static async socketReadings(socket: Socket, deviceCode: string) {
     try {
-      const reading = await Reading.find<IReading>({
-        deviceCode,
-      })
-        .sort({ createdAt: -1 })
-        .limit(20);
-
       const device = await Device.findOne({ deviceCode });
 
       const sensors = await Sensor.find<ISensor>({
         deviceId: device?._id,
       });
 
-      const latestSensorReadings = map(sensors, (sensor): latestReading => {
-        const sensorReadings = find(
-          reading,
-          (r: IReading) => r.sensorCode === sensor.sensorCode
-        );
+      const latestSensorReadings = await Promise.all(
+        map(sensors, async (sensor): Promise<latestReading> => {
+          const [sensorReading] = await Reading.find<IReading>({
+            deviceCode,
+            sensorCode: sensor.sensorCode,
+          })
+            .sort({ createdAt: -1 })
+            .limit(1);
 
-        return {
-          sensorValue: sensorReadings?.sensorValue || 0,
-          deviceName: device?.deviceName,
-          sensorName: sensor.sensorName,
-          sensorUnits: sensor.sensorUnits,
-          sensorCode: sensor.sensorCode,
-          sensorGrouping: sensor.sensorGrouping,
-        };
-      });
+          return {
+            sensorValue: sensorReading?.sensorValue || 0,
+            deviceName: device?.deviceName,
+            sensorName: sensor.sensorName,
+            sensorUnits: sensor.sensorUnits,
+            sensorCode: sensor.sensorCode,
+            sensorGrouping: sensor.sensorGrouping,
+          };
+        })
+      );
 
       const airSensors = filter(
         latestSensorReadings,
