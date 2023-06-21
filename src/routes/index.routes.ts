@@ -3,6 +3,7 @@ import express from "express";
 import deviceRouter from "./device.routes";
 import readingRouter from "./readings.routes";
 import sensorRouter from "./sensor.routes";
+import trendsRouter from "./trends.routes";
 
 const indexRouter = express.Router();
 
@@ -12,5 +13,6 @@ indexRouter.get(`/`, AppController.index);
 indexRouter.use(`${prefix}/devices`, deviceRouter);
 indexRouter.use(`${prefix}/readings`, readingRouter);
 indexRouter.use(`${prefix}/sensors`, sensorRouter);
+indexRouter.use(`${prefix}/trends`, trendsRouter);
 
 export default indexRouter;
