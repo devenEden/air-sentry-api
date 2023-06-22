@@ -18,3 +18,9 @@ export type latestReading = {
   sensorCode: string;
   sensorGrouping: string;
 };
+
+export type TSensorTrend = {
+  average: number | string;
+  name: string;
+  period: string;
+};
