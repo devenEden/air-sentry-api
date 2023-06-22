@@ -3,9 +3,14 @@ import HttpStatusCodes from "@config/httpStatusCode";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
 import Sensor from "@models/sensors.model";
-import { IDevice, ISensor } from "@utils/interfaces/app/app.interface";
+import {
+  IDevice,
+  ISensor,
+  ISensorScale,
+} from "@utils/interfaces/app/app.interface";
 import { map } from "lodash";
 import { Schema } from "mongoose";
+import SensorScale from "@src/database/models/scales.model";
 
 const http = new HttpResponse();
 
@@ -40,11 +45,34 @@ class DeviceController {
   async getDeviceDetails(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const device = await Device.findById(id);
+      const device = await Device.findById(id).populate("sensors");
 
-      const sensors = await Sensor.find({
-        device: id,
-      }).populate("readings");
+      type TSensorWithScale = {
+        scales?: ISensorScale;
+        sensor: ISensor;
+      };
+
+      let sensors: TSensorWithScale[] = [];
+
+      if (device?.sensors) {
+        const sensorScales = await SensorScale.find({
+          sensorCode: { $in: map(device.sensors as ISensor[], "sensorCode") },
+        });
+
+        sensors = map(
+          device.sensors as ISensor[],
+          (sensor: ISensor): TSensorWithScale => {
+            const scales = sensorScales.find(
+              (scale: ISensorScale) => scale.sensorCode === sensor.sensorCode
+            );
+
+            return {
+              sensor,
+              scales,
+            };
+          }
+        );
+      }
 
       return http.sendSuccess(
         res,
