@@ -3,6 +3,9 @@ import Sensor from "@models/sensors.model";
 import { ISensor } from "@utils/interfaces/app/app.interface";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
+import SensorScale from "@src/database/models/scales.model";
+import Device from "@src/database/models/device.model";
+import { Schema } from "mongoose";
 
 const http = new HttpResponse();
 
@@ -43,6 +46,16 @@ class SensorController {
     try {
       const data: ISensor = req.body;
       const sensor = await Sensor.create(data);
+
+      const device = await Device.findById(sensor.deviceId).populate("sensors");
+
+      if (device?.sensors) {
+        const sensors = [...device.sensors, sensor._id];
+
+        device.sensors = sensors as Schema.Types.ObjectId[];
+
+        await device.save();
+      }
 
       http.sendSuccess(
         res,
@@ -123,6 +136,86 @@ class SensorController {
       );
     } catch (error) {
       return http.sendError(next, "Unable to delete sensor", error);
+    }
+  }
+
+  /**
+   * bulk create sensor scales
+   * @param req
+   * @param res
+   * @param next
+   * @returns
+   */
+  async bulkCreateSensorScales(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { sensorScales } = req.body;
+
+      const scales = await SensorScale.insertMany(sensorScales);
+
+      return http.sendSuccess(
+        res,
+        HttpStatusCodes.OK,
+        "Sensor scales created successfully",
+        { scales }
+      );
+    } catch (error) {
+      return http.sendError(next, "Unable to create sensor scales", error);
+    }
+  }
+
+  /**
+   * delete sensor scale
+   * @param req
+   * @param res
+   * @param next
+   * @returns
+   */
+  async deleteSensorScales(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+
+      const scales = await SensorScale.findByIdAndDelete(id);
+
+      return http.sendSuccess(
+        res,
+        HttpStatusCodes.OK,
+        "Sensor scales deleted successfully",
+        { scales }
+      );
+    } catch (error) {
+      return http.sendError(next, "Unable to delete sensor scales", error);
+    }
+  }
+
+  /**
+   * update sensor scale
+   * @param req
+   * @param res
+   * @param next
+   * @returns
+   */
+  async updateSensorScale(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+
+      const data = req.body;
+
+      const updatedSensorScale = await SensorScale.findByIdAndUpdate(id, data, {
+        new: true,
+      });
+
+      return http.sendSuccess(
+        res,
+        HttpStatusCodes.OK,
+        "Sensor scale updated successfully",
+        { updatedSensorScale }
+      );
+    } catch (error) {
+      return http.sendError(next, "Unable to update sensor scale", error);
     }
   }
 }
