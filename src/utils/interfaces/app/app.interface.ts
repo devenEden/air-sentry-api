@@ -11,14 +11,12 @@ export interface ResponseData {
   [key: string]: object;
 }
 
-export interface ISensor extends Document {
-  sensorName: string;
+export interface ISensorScale extends Document {
   sensorCode: string;
-  sensorUnits: string;
-  sensorGrouping: string;
-  deviceId: Schema.Types.ObjectId;
-  readings: Schema.Types.ObjectId[];
-  sensorIcon?: string;
+  from: number;
+  to: number;
+  comment: string;
+  colorCode: string;
   createdAt:
     | {
         type: Date;
@@ -33,12 +31,15 @@ export interface ISensor extends Document {
     | Date;
 }
 
-export interface ISensorScale extends Document {
+export interface ISensor extends Document {
+  sensorName: string;
   sensorCode: string;
-  from: number;
-  to: number;
-  comment: string;
-  colorCode: string;
+  sensorUnits: string;
+  sensorGrouping: string;
+  deviceId: Schema.Types.ObjectId;
+  readings: Schema.Types.ObjectId[];
+  sensorIcon?: string;
+  scales?: Schema.Types.ObjectId[] | ISensorScale[];
   createdAt:
     | {
         type: Date;
