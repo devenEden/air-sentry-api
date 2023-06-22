@@ -4,11 +4,12 @@ import Sensor from "@models/sensors.model";
 import { IReading, ISensor } from "@utils/interfaces/app/app.interface";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
-import { filter, map, sumBy, toNumber, toString } from "lodash";
+import { filter, inRange, map, sumBy, toNumber, toString } from "lodash";
 import { Socket, Server as SocketServer } from "socket.io";
 import constants from "@config/constants";
 import Device from "@models/device.model";
 import { latestReading } from "@utils/types/app.types";
+import SensorScale from "@models/scales.model";
 
 const { socketEvents } = constants;
 
@@ -41,6 +42,18 @@ class ReadingController {
             .sort({ createdAt: -1 })
             .limit(1);
 
+          const sensorScales = await SensorScale.find({
+            sensorCode: sensor.sensorCode,
+          });
+
+          const sensorScale = sensorScales.find((scale) =>
+            inRange(
+              parseFloat(sensorReading?.sensorValue),
+              scale.to,
+              scale.from
+            )
+          );
+
           return {
             sensorValue: sensorReading?.sensorValue || 0,
             deviceName: device?.deviceName,
@@ -48,6 +61,8 @@ class ReadingController {
             sensorUnits: sensor.sensorUnits,
             sensorCode: sensor.sensorCode,
             sensorGrouping: sensor.sensorGrouping,
+            comment: sensorScale?.comment || "",
+            colorCode: sensorScale?.colorCode || "",
           };
         })
       );
@@ -197,6 +212,18 @@ class ReadingController {
             .sort({ createdAt: -1 })
             .limit(1);
 
+          const sensorScales = await SensorScale.find({
+            sensorCode: sensor.sensorCode,
+          });
+
+          const sensorScale = sensorScales.find((scale) =>
+            inRange(
+              parseFloat(sensorReading?.sensorValue),
+              scale.to,
+              scale.from
+            )
+          );
+
           return {
             sensorValue: sensorReading?.sensorValue || 0,
             deviceName: device?.deviceName,
@@ -204,6 +231,8 @@ class ReadingController {
             sensorUnits: sensor.sensorUnits,
             sensorCode: sensor.sensorCode,
             sensorGrouping: sensor.sensorGrouping,
+            comment: sensorScale?.comment || "",
+            colorCode: sensorScale?.colorCode || "",
           };
         })
       );

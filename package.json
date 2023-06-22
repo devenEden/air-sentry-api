@@ -50,6 +50,7 @@
     "mongodb": "^5.4.0",
     "mongoose": "^7.1.0",
     "morgan": "^1.10.0",
+    "openai": "^3.3.0",
     "socket.io": "^4.6.2",
     "winston": "^3.8.2",
     "zod": "^3.21.4"

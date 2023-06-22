@@ -17,10 +17,18 @@ export type latestReading = {
   sensorUnits: string;
   sensorCode: string;
   sensorGrouping: string;
+  comment?: string;
+  colorCode?: string;
 };
 
 export type TSensorTrend = {
   average: number | string;
   name: string;
   period: string;
+};
+
+export type TSensorAverage = {
+  sensor: string;
+  average: number | string;
+  units: string;
 };

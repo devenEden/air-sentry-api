@@ -16,6 +16,7 @@ const SensorSchema = new Schema<ISensor>({
   },
   sensorGrouping: String,
   sensorUnits: String,
+  sensorIcon: String,
   deviceId: {
     type: Schema.Types.ObjectId,
     ref: "Device",

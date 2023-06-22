@@ -11,6 +11,26 @@ export interface ResponseData {
   [key: string]: object;
 }
 
+export interface ISensorScale extends Document {
+  sensorCode: string;
+  from: number;
+  to: number;
+  comment: string;
+  colorCode: string;
+  createdAt:
+    | {
+        type: Date;
+        default: Moment;
+      }
+    | Date;
+  updatedAt:
+    | {
+        type: Date;
+        default: Moment;
+      }
+    | Date;
+}
+
 export interface ISensor extends Document {
   sensorName: string;
   sensorCode: string;
@@ -18,6 +38,8 @@ export interface ISensor extends Document {
   sensorGrouping: string;
   deviceId: Schema.Types.ObjectId;
   readings: Schema.Types.ObjectId[];
+  sensorIcon?: string;
+  scales?: Schema.Types.ObjectId[] | ISensorScale[];
   createdAt:
     | {
         type: Date;

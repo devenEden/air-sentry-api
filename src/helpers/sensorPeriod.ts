@@ -1,4 +1,4 @@
-import { IReading } from "@src/utils/interfaces/app/app.interface";
+import { IReading } from "@utils/interfaces/app/app.interface";
 import { TSensorTrend } from "@utils/types/app.types";
 import { filter, map, sumBy, toString } from "lodash";
 import moment, { Moment, unitOfTime } from "moment-timezone";
@@ -65,4 +65,26 @@ export const sensorPeriodTrends = (
     averageReadings: isNaN(averageReadings) ? 0 : averageReadings.toFixed(2),
     periodAverageValues,
   };
+};
+
+export const calculateSensorPeriodAverage = (
+  periodType: unitOfTime.StartOf,
+  readings: IReading[]
+): number | string => {
+  const currentDate = moment();
+  const start = currentDate.clone().startOf(periodType);
+  const end = currentDate.clone().endOf(periodType);
+
+  const readingsByPeriod = filter(readings, (reading) => {
+    const isoDate = new Date(toString(reading.createdAt)).toISOString();
+
+    const readingDate = moment(toString(isoDate));
+
+    return readingDate.isBetween(start, end);
+  });
+
+  const average =
+    sumBy(readingsByPeriod, "sensorValue") / readingsByPeriod.length;
+
+  return isNaN(average) ? 0 : average.toFixed(2);
 };
