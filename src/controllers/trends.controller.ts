@@ -132,7 +132,7 @@ class TrendsController {
    */
   async airQualityTrends(req: Request, res: Response, next: NextFunction) {
     try {
-      const { period } = req.query;
+      const { period, deviceId } = req.query;
 
       moment.tz.setDefault(envVars.timezone);
 
@@ -140,6 +140,7 @@ class TrendsController {
 
       const airSensors = await Sensor.find<ISensor>({
         sensorGrouping: constants.sensorGroupings.AIR,
+        deviceId,
       });
 
       const readings = await Reading.find<IReading>({
