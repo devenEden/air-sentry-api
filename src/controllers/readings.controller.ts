@@ -62,6 +62,7 @@ class ReadingController {
             sensorCode: sensor.sensorCode,
             sensorGrouping: sensor.sensorGrouping,
             comment: sensorScale?.comment || "",
+            colorCode: sensorScale?.colorCode || "",
           };
         })
       );
@@ -211,6 +212,18 @@ class ReadingController {
             .sort({ createdAt: -1 })
             .limit(1);
 
+          const sensorScales = await SensorScale.find({
+            sensorCode: sensor.sensorCode,
+          });
+
+          const sensorScale = sensorScales.find((scale) =>
+            inRange(
+              parseFloat(sensorReading?.sensorValue),
+              scale.to,
+              scale.from
+            )
+          );
+
           return {
             sensorValue: sensorReading?.sensorValue || 0,
             deviceName: device?.deviceName,
@@ -218,6 +231,8 @@ class ReadingController {
             sensorUnits: sensor.sensorUnits,
             sensorCode: sensor.sensorCode,
             sensorGrouping: sensor.sensorGrouping,
+            comment: sensorScale?.comment || "",
+            colorCode: sensorScale?.colorCode || "",
           };
         })
       );
