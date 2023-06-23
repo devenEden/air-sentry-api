@@ -7,7 +7,7 @@
     "build": "rimraf dist && swc ./src -d dist && cp -R ./src/views ./dist/views",
     "lint": "npx eslint --ext .ts src/",
     "lint:tests": "npx eslint --ext .ts spec/",
-    "start": "npm  i && npm run build && node -r module-alias/register ./dist/server.js --env=production",
+    "start": "node -r module-alias/register ./dist/server.js --env=production",
     "dev": "nodemon"
   },
   "keywords": [],
