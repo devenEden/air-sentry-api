@@ -17,6 +17,8 @@ import {
   ChatCompletionRequestMessageRoleEnum,
 } from "openai";
 import { TSensorAverage } from "@src/utils/types/app.types";
+import envVars from "@src/config/envVars";
+import isValidJson from "@src/helpers/isJson";
 
 const http = new HttpResponse();
 const chatBot = new ChatBot("gpt-3.5-turbo");
@@ -49,15 +51,28 @@ class InsightsController {
           HttpStatusCodes.BAD_REQUEST
         );
 
+      moment.tz.setDefault(envVars.timezone);
+
+      const currentDate = moment();
+
+      const startSearch = currentDate
+        .startOf(period as unitOfTime.StartOf)
+        .toDate();
+      const endSearch = currentDate
+        .endOf(period as unitOfTime.StartOf)
+        .toDate();
+
       const sensorsAverages: TSensorAverage[] = await Promise.all(
         map(
           device.sensors as ISensor[],
           async (sensor: ISensor): Promise<TSensorAverage> => {
             const readings = await Reading.find({
               sensorCode: sensor.sensorCode,
-            })
-              .sort({ createdAt: -1 })
-              .limit(500);
+              createdAt: {
+                $gte: startSearch,
+                $lte: endSearch,
+              },
+            }).sort({ createdAt: -1 });
 
             const average = calculateSensorPeriodAverage(
               period as unitOfTime.StartOf,
@@ -99,7 +114,9 @@ class InsightsController {
         HttpStatusCodes.OK,
         "Successfully retrieved insights",
         {
-          insights: JSON.parse(insights?.content as string),
+          insights: isValidJson(insights?.content as string)
+            ? JSON.parse(insights?.content as string)
+            : [],
           sensors,
           device,
         }
@@ -136,29 +153,55 @@ class InsightsController {
       if (!device)
         throw new AppError("Device not found", HttpStatusCodes.NOT_FOUND);
 
+      moment.tz.setDefault(envVars.timezone);
+
+      const currentDate = moment();
+
+      const startSearch = currentDate
+        .startOf(period as unitOfTime.StartOf)
+        .toDate();
+      const endSearch = currentDate
+        .endOf(period as unitOfTime.StartOf)
+        .toDate();
+
       const readings = await Reading.find({
         sensorCode: sensor.sensorCode,
-      })
-        .sort({ createdAt: -1 })
-        .limit(500);
+        createdAt: {
+          $gte: startSearch,
+          $lte: endSearch,
+        },
+      }).sort({ createdAt: -1 });
 
       const average = calculateSensorPeriodAverage(
         period as unitOfTime.StartOf,
         readings
       );
 
-      const insightPrompt = constants.chatInsightQuestions.generalInsights(
-        `${sensor.sensorName} of ${average}${sensor.sensorUnits}`,
-        sensor.sensorName,
-        toString(device.location),
-        `these are ${period}ly averages in ${moment().format("MMMM YYYY")}`
-      );
+      const insightPrompt: ChatCompletionRequestMessage[] = [
+        {
+          role: constants.chatGPTRoles
+            .user as ChatCompletionRequestMessageRoleEnum,
+          content: constants.chatInsightQuestions.generalInsights(
+            `${sensor.sensorName} of ${average}${sensor.sensorUnits}`,
+            sensor.sensorName,
+            toString(device.location),
+            `these are ${period}ly averages in ${moment().format("MMMM YYYY")}`
+          ),
+        },
+      ];
+
+      const insights = await chatBot.chatCompletion(insightPrompt);
 
       http.sendSuccess(
         res,
         HttpStatusCodes.OK,
         "Successfully retrieved insights",
-        { average, insightPrompt }
+        {
+          average,
+          insights: isValidJson(insights?.content as string)
+            ? JSON.parse(insights?.content as string)
+            : [],
+        }
       );
     } catch (error) {
       http.sendError(next, "Unable to get insights", error);
@@ -194,15 +237,28 @@ class InsightsController {
       if (isEmpty(airSensors))
         throw new AppError("No air sensors found", HttpStatusCodes.NOT_FOUND);
 
+      moment.tz.setDefault(envVars.timezone);
+
+      const currentDate = moment();
+
+      const startSearch = currentDate
+        .startOf(period as unitOfTime.StartOf)
+        .toDate();
+      const endSearch = currentDate
+        .endOf(period as unitOfTime.StartOf)
+        .toDate();
+
       const sensorsAverages: TSensorAverage[] = await Promise.all(
         map(
           airSensors as ISensor[],
           async (sensor: ISensor): Promise<TSensorAverage> => {
             const readings = await Reading.find({
               sensorCode: sensor.sensorCode,
-            })
-              .sort({ createdAt: -1 })
-              .limit(500);
+              createdAt: {
+                $gte: startSearch,
+                $lte: endSearch,
+              },
+            }).sort({ createdAt: -1 });
 
             const average = calculateSensorPeriodAverage(
               period as unitOfTime.StartOf,
@@ -242,9 +298,11 @@ class InsightsController {
       http.sendSuccess(
         res,
         HttpStatusCodes.OK,
-        "Successfully retrieved insights",
+        "Successfully retrieved air quality insights",
         {
-          insights: JSON.parse(insights?.content as string),
+          insights: isValidJson(insights?.content as string)
+            ? JSON.parse(insights?.content as string)
+            : [],
           sensors,
           device,
         }

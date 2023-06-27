@@ -5,8 +5,8 @@ const insightsRouter = Router();
 
 const controller = new InsightsController();
 
+insightsRouter.get("/air-quality", controller.airQualityInsights);
 insightsRouter.get("/:deviceId", controller.getInsightsOnAverage);
 insightsRouter.get("/sensor/:sensorId", controller.insightsBySensor);
-insightsRouter.get("/air-quality", controller.airQualityInsights);
 
 export default insightsRouter;

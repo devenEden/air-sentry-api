@@ -1,6 +1,6 @@
 import { IReading } from "@utils/interfaces/app/app.interface";
 import { TSensorTrend } from "@utils/types/app.types";
-import { filter, map, sumBy, toString } from "lodash";
+import { filter, map, meanBy, toString } from "lodash";
 import moment, { Moment, unitOfTime } from "moment-timezone";
 
 type TSensorPeriodOptions = {
@@ -16,19 +16,16 @@ export const sensorPeriodTrends = (
   readings: IReading[],
   config: TSensorPeriodOptions
 ) => {
-  const start = currentDate.clone().startOf(config.periodType);
-  const end = currentDate.clone().endOf(config.periodType);
-
-  const readingsByPeriod = filter(readings, (reading) => {
-    const isoDate = new Date(toString(reading.createdAt)).toISOString();
-
-    const readingDate = moment(toString(isoDate));
-
-    return readingDate.isBetween(start, end);
-  });
-
   const averageReadings =
-    sumBy(readingsByPeriod, "sensorValue") / readingsByPeriod.length;
+    meanBy(
+      filter(readings, (reading) => {
+        const now = moment();
+        const createdAt = moment(toString(reading.createdAt));
+
+        return Number(reading.sensorValue) > 0 && createdAt.isBefore(now);
+      }),
+      "sensorValue"
+    ) || 0;
 
   const periodAverageValues = map(config.rangeNumbers, (day): TSensorTrend => {
     const currentDay = currentDate
@@ -36,33 +33,37 @@ export const sensorPeriodTrends = (
         .startOf(config.periodType)
         .add(day, config.periodSubType)
         .format(config.periodFormat),
-      dayReadings = filter(readingsByPeriod, (reading) => {
+      dayReadings = filter(readings, (reading) => {
         const isoDate = new Date(toString(reading.createdAt)).toISOString();
 
         const readingDate = moment(toString(isoDate));
 
-        return readingDate.isBetween(
-          currentDate
-            .clone()
-            .startOf(config.periodType)
-            .add(day, config.periodSubType),
-          currentDate
-            .clone()
-            .startOf(config.periodType)
-            .add(day + 1, config.periodSubType)
+        return (
+          readingDate.isBetween(
+            currentDate
+              .clone()
+              .startOf(config.periodType)
+              .add(day, config.periodSubType),
+            currentDate
+              .clone()
+              .startOf(config.periodType)
+              .add(day + 1, config.periodSubType)
+          ) && readingDate.isBefore(currentDate)
         );
       }),
-      averageCalc = sumBy(dayReadings, "sensorValue") / dayReadings.length;
+      averageCalc = meanBy(dayReadings, "sensorValue");
 
     return {
-      average: isNaN(averageCalc) ? 0 : averageCalc.toFixed(2),
+      average: isNaN(averageCalc) ? 0 : Number(averageCalc.toFixed(2)),
       name: currentDay,
       period: period,
     };
   });
 
   return {
-    averageReadings: isNaN(averageReadings) ? 0 : averageReadings.toFixed(2),
+    averageReadings: isNaN(averageReadings)
+      ? 0
+      : Number(averageReadings.toFixed(2)),
     periodAverageValues,
   };
 };
@@ -71,20 +72,17 @@ export const calculateSensorPeriodAverage = (
   periodType: unitOfTime.StartOf,
   readings: IReading[]
 ): number | string => {
-  const currentDate = moment();
-  const start = currentDate.clone().startOf(periodType);
-  const end = currentDate.clone().endOf(periodType);
+  const average = meanBy(
+    filter(readings, (reading) => {
+      const now = moment();
+      const createdAt = moment(
+        new Date(toString(reading.createdAt)).toISOString()
+      );
 
-  const readingsByPeriod = filter(readings, (reading) => {
-    const isoDate = new Date(toString(reading.createdAt)).toISOString();
+      return Number(reading.sensorValue) > 0 && createdAt.isBefore(now);
+    }),
+    "sensorValue"
+  );
 
-    const readingDate = moment(toString(isoDate));
-
-    return readingDate.isBetween(start, end);
-  });
-
-  const average =
-    sumBy(readingsByPeriod, "sensorValue") / readingsByPeriod.length;
-
-  return isNaN(average) ? 0 : average.toFixed(2);
+  return isNaN(average) ? 0 : Number(average.toFixed(2));
 };

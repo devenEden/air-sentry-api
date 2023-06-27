@@ -19,6 +19,9 @@ export type latestReading = {
   sensorGrouping: string;
   comment?: string;
   colorCode?: string;
+  sensorId: string;
+  min: number;
+  max: number;
 };
 
 export type TSensorTrend = {
