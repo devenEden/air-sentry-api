@@ -32,6 +32,7 @@ export interface ISensorScale extends Document {
 }
 
 export interface ISensor extends Document {
+  _id?: Schema.Types.ObjectId | string;
   sensorName: string;
   sensorCode: string;
   sensorUnits: string;
@@ -40,6 +41,8 @@ export interface ISensor extends Document {
   readings: Schema.Types.ObjectId[];
   sensorIcon?: string;
   scales?: Schema.Types.ObjectId[] | ISensorScale[];
+  min: number;
+  max: number;
   createdAt:
     | {
         type: Date;
@@ -81,7 +84,7 @@ export interface IDevice extends Document {
 export interface IReading extends Document {
   sensorCode: string;
   deviceCode: string;
-  sensorValue: string;
+  sensorValue: number | string;
   createdAt:
     | Date
     | {

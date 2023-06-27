@@ -8,7 +8,7 @@ import {
   ISensor,
   ISensorScale,
 } from "@utils/interfaces/app/app.interface";
-import { map } from "lodash";
+import { filter, map } from "lodash";
 import { Schema } from "mongoose";
 import SensorScale from "@src/database/models/scales.model";
 
@@ -48,7 +48,7 @@ class DeviceController {
       const device = await Device.findById(id).populate("sensors");
 
       type TSensorWithScale = {
-        scales?: ISensorScale;
+        scales?: ISensorScale[];
         sensor: ISensor;
       };
 
@@ -62,7 +62,8 @@ class DeviceController {
         sensors = map(
           device.sensors as ISensor[],
           (sensor: ISensor): TSensorWithScale => {
-            const scales = sensorScales.find(
+            const scales = filter(
+              sensorScales,
               (scale: ISensorScale) => scale.sensorCode === sensor.sensorCode
             );
 

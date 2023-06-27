@@ -5,11 +5,14 @@ import Sensor from "@models/sensors.model";
 import { IReading, ISensor } from "@utils/interfaces/app/app.interface";
 import HttpResponse from "@utils/http.util";
 import { Request, Response, NextFunction } from "express";
-import moment from "moment-timezone";
+import moment, { unitOfTime } from "moment-timezone";
 import envVars from "@config/envVars";
 import AppError from "@utils/appError.util";
-import { range } from "lodash";
-import { sensorPeriodTrends } from "@src/helpers/sensorPeriod";
+import { filter, map, meanBy, range, toString } from "lodash";
+import {
+  calculateSensorPeriodAverage,
+  sensorPeriodTrends,
+} from "@src/helpers/sensorPeriod";
 import { TSensorTrend } from "@utils/types/app.types";
 
 const http = new HttpResponse();
@@ -37,33 +40,53 @@ class TrendsController {
       moment.tz.setDefault(envVars.timezone);
 
       const currentDate = moment();
+      const startSearch = currentDate
+        .startOf(period as unitOfTime.StartOf)
+        .toDate();
+      const endSearch = currentDate
+        .endOf(period as unitOfTime.StartOf)
+        .toDate();
 
       const readings: IReading[] = await Reading.find<IReading>({
         sensorCode: sensor?.sensorCode,
-      })
-        .sort({ createdAt: -1 })
-        .limit(500);
+        createdAt: {
+          $gte: startSearch,
+          $lte: endSearch,
+        },
+      }).sort({ createdAt: -1 });
 
       let sensorTrends: TSensorTrend[] = [];
       let periodAverage: string | number = 0;
       const { trendPeriods } = constants;
 
+      const now = moment();
+
       switch (period) {
         case trendPeriods.DAY: {
-          const sensorPeriod = sensorPeriodTrends(
-            trendPeriods.DAY,
-            currentDate,
-            readings,
-            {
-              periodFormat: "HH:mm",
-              periodSubType: "h",
-              periodType: "d",
-              rangeNumbers: range(0, 23),
+          const periodGrouping = map(
+            Object.values(constants.dayPeriodGrouping),
+            ({ start, end, period }) => {
+              const mStart = moment(start, "HH:mm");
+              const mEnd = moment(end, "HH:mm");
+
+              const pTrends = filter(readings, ({ createdAt }) => {
+                const mPeriod = moment(new Date(toString(createdAt)), "HH:mm");
+
+                return mPeriod.isBetween(mStart, mEnd) && mPeriod.isBefore(now);
+              });
+
+              const average = meanBy(pTrends, "sensorValue") || 0;
+
+              return {
+                name: period,
+                period: constants.trendPeriods.DAY,
+                average,
+              };
             }
           );
 
-          sensorTrends = sensorPeriod.periodAverageValues;
-          periodAverage = sensorPeriod.averageReadings;
+          sensorTrends = periodGrouping;
+          periodAverage = calculateSensorPeriodAverage("D", readings);
 
           break;
         }
@@ -93,14 +116,13 @@ class TrendsController {
             currentDate,
             readings,
             {
-              periodFormat: "ddd do MMM YY",
+              periodFormat: "do MMM YY",
               periodSubType: "d",
               periodType: "M",
               rangeNumbers: range(0, 30),
             }
           );
 
-          sensorTrends = sensorPeriod.periodAverageValues;
           periodAverage = sensorPeriod.averageReadings;
 
           break;
@@ -137,6 +159,12 @@ class TrendsController {
       moment.tz.setDefault(envVars.timezone);
 
       const currentDate = moment();
+      const startSearch = currentDate
+        .startOf(period as unitOfTime.StartOf)
+        .toDate();
+      const endSearch = currentDate
+        .endOf(period as unitOfTime.StartOf)
+        .toDate();
 
       const airSensors = await Sensor.find<ISensor>({
         sensorGrouping: constants.sensorGroupings.AIR,
@@ -145,6 +173,10 @@ class TrendsController {
 
       const readings = await Reading.find<IReading>({
         sensorCode: { $in: airSensors.map((s) => s.sensorCode) },
+        createdAt: {
+          $gte: startSearch,
+          $lte: endSearch,
+        },
       })
         .sort({ createdAt: -1 })
         .limit(500);
@@ -152,23 +184,34 @@ class TrendsController {
       let sensorTrends: TSensorTrend[] = [];
       let periodAverage: string | number = 0;
       const { trendPeriods } = constants;
+      const now = moment();
 
       switch (period) {
         case trendPeriods.DAY: {
-          const sensorPeriod = sensorPeriodTrends(
-            trendPeriods.DAY,
-            currentDate,
-            readings,
-            {
-              periodFormat: "HH:mm",
-              periodSubType: "h",
-              periodType: "d",
-              rangeNumbers: range(0, 23),
+          const periodGrouping = map(
+            Object.values(constants.dayPeriodGrouping),
+            ({ start, end, period }) => {
+              const mStart = moment(start, "HH:mm");
+              const mEnd = moment(end, "HH:mm");
+
+              const pTrends = filter(readings, ({ createdAt }) => {
+                const mPeriod = moment(new Date(toString(createdAt)), "HH:mm");
+
+                return mPeriod.isBetween(mStart, mEnd) && mPeriod.isBefore(now);
+              });
+
+              const average = meanBy(pTrends, "sensorValue") || 0;
+
+              return {
+                name: period,
+                period: constants.trendPeriods.DAY,
+                average,
+              };
             }
           );
 
-          sensorTrends = sensorPeriod.periodAverageValues;
-          periodAverage = sensorPeriod.averageReadings;
+          sensorTrends = periodGrouping;
+          periodAverage = calculateSensorPeriodAverage("D", readings);
 
           break;
         }
@@ -198,14 +241,13 @@ class TrendsController {
             currentDate,
             readings,
             {
-              periodFormat: "ddd do MMM YY",
+              periodFormat: "ddd do MMM",
               periodSubType: "d",
               periodType: "M",
               rangeNumbers: range(0, 30),
             }
           );
 
-          sensorTrends = sensorPeriod.periodAverageValues;
           periodAverage = sensorPeriod.averageReadings;
 
           break;
