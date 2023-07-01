@@ -11,6 +11,9 @@ export const validateCreateDevice = async (
     sensorName: Joi.string().required(),
     sensorCode: Joi.string().required(),
     sensorUnits: Joi.string().required(),
+    min: Joi.string().required(),
+    max: Joi.string().required(),
+    sensorGrouping: Joi.string().required(),
   });
 
   return await JoiValidator(
